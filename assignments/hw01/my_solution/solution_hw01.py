@@ -6,7 +6,7 @@ import rclpy
 from geometry_msgs.msg import PointStamped
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 
 from hw01_sim.arm_client import ArmClient
 
@@ -15,16 +15,35 @@ def main():
     rclpy.init()
     node = Node('hw01_check_setup')
     arm = ArmClient(node)
+
     image_received = None
+    depth_received = None
+    info_received = None
 
     # Camera data uses best-effort QoS. No image processing is needed for this check.
-    def on_image(image):
+    def on_image(image: Image):
         nonlocal image_received
         if image_received is None:
             print(f'Image: {image.width} x {image.height}, encoding={image.encoding}', flush=True)
         if image.width > 0 and image.height > 0 and len(image.data) >= image.step * image.height:
             image_received = time.monotonic()
+
+    def on_depth(depth: Image):
+        nonlocal depth_received
+        if depth_received is None:
+            print(f'Depth: {depth.width} x {depth.height}, encoding={depth.encoding}', flush=True)
+        if image.width > 0 and image.height > 0 and len(image.data) >= image.step * image.height:
+            depth_received = time.monotonic()
+
+    def on_info(info: CameraInfo):
+        nonlocal info_received
+        if info_received is None:
+            print("Info received") # TODO: Print info parameters(K, D, etc)
+        info_recieved = info
+
     node.create_subscription(Image, '/camera/image_raw', on_image, qos_profile_sensor_data)
+    node.create_subscription(Image, '/camera/depth/image_raw', on_depth, qos_profile_sensor_data)
+    node.create_subscription(CameraInfo, '/camera/camera_info', on_info, qos_profile_sensor_data)
 
     motion = None
     deadline = time.monotonic() + 100.0
@@ -39,15 +58,22 @@ def main():
                 motion = arm.move_to_point(point)
             if motion is not None and motion.done():
                 break
+
         image_ok = image_received is not None and time.monotonic() - image_received < 2.0
+        depth_ok = depth_received is not None and time.monotonic() - depth_received < 2.0
         motion_ok = motion is not None and motion.done() and motion.result().success
+
         print(f'{"PASS" if image_ok else "FAIL"}: fresh camera image reception')
+        print(f'{"PASS" if depth_ok else "FAIL"}: fresh camera depth reception')
         print(f'{"PASS" if motion_ok else "FAIL"}: fixed-point arm movement')
+
         if motion is not None and motion.done():
             print(motion.result().message)
         return 0 if image_ok and motion_ok else 1
+
     except KeyboardInterrupt:
         return 1
+
     finally:
         arm.cancel()
         for _ in range(5):
