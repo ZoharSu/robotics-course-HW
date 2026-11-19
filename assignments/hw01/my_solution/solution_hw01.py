@@ -18,28 +18,35 @@ def main():
 
     image_received = None
     depth_received = None
-    info_received = None
+
+    raw_image   = None
+    depth_image = None
+    camera_info = None
 
     # Camera data uses best-effort QoS. No image processing is needed for this check.
     def on_image(image: Image):
         nonlocal image_received
+        nonlocal raw_image
         if image_received is None:
             print(f'Image: {image.width} x {image.height}, encoding={image.encoding}', flush=True)
         if image.width > 0 and image.height > 0 and len(image.data) >= image.step * image.height:
             image_received = time.monotonic()
+            raw_image = image
 
     def on_depth(depth: Image):
         nonlocal depth_received
+        nonlocal depth_image
         if depth_received is None:
             print(f'Depth: {depth.width} x {depth.height}, encoding={depth.encoding}', flush=True)
         if image.width > 0 and image.height > 0 and len(image.data) >= image.step * image.height:
             depth_received = time.monotonic()
+            depth_image = depth
 
     def on_info(info: CameraInfo):
-        nonlocal info_received
-        if info_received is None:
+        nonlocal camera_info
+        if camera_info is None:
             print("Info received") # TODO: Print info parameters(K, D, etc)
-        info_recieved = info
+        camera_info = info
 
     node.create_subscription(Image, '/camera/image_raw', on_image, qos_profile_sensor_data)
     node.create_subscription(Image, '/camera/depth/image_raw', on_depth, qos_profile_sensor_data)
