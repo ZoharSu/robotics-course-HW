@@ -75,6 +75,7 @@ def main():
     node.create_subscription(Image, '/camera/image_raw', on_image, qos_profile_sensor_data)
     node.create_subscription(Image, '/camera/depth/image_raw', on_depth, qos_profile_sensor_data)
     node.create_subscription(CameraInfo, '/camera/camera_info', on_info, qos_profile_sensor_data)
+    target_camera_publisher = node.create_publisher(PointStamped, "/hw01/target_camera", 5)
 
     motion = None
     cx = 0; cy = 0
@@ -95,8 +96,9 @@ def main():
             K = np.reshape(np.array(camera_info.k), (3, 3))
             cx, cy = image_to_3d(K, cix, ciy, cz)
 
-            print(f"{cx = }, {cy = }")
-            # TODO: base_link transformation
+            target_camera_publisher.publish(PointStamped(cx, cy, cz))
+            print(f"debug: {cx = }, {cy = }") # TODO: remove as it's only for debugging
+            # TODO: base_link transformation + publishing the results
         # TODO: motion based on `./check_setup.py`
 
         print(f'{"PASS" if image_ok else "FAIL"}: fresh camera image reception')
