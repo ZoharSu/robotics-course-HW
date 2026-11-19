@@ -55,7 +55,7 @@ def main():
         nonlocal depth_image
         if depth_received is None:
             print(f'Depth: {depth.width} x {depth.height}, encoding={depth.encoding}', flush=True)
-        if image.width > 0 and image.height > 0 and len(image.data) >= image.step * image.height:
+        if depth.width > 0 and depth.height > 0 and len(depth.data) >= depth.step * depth.height:
             depth_received = time.monotonic()
             depth_image = depth
 
