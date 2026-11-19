@@ -8,13 +8,30 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image, CameraInfo
 
+import numpy as np
+from cv_bridge import CvBridge
+import cv2
+
 from hw01_sim.arm_client import ArmClient
 
+
+def find_marker(cvb: CvBridge, image: Image) -> tuple[float, float]:
+    # FIXME: Account for partially occluded/nonexistant marker
+    cvimage = cvb.imgmsg_to_cv2(image, desired_encoding='bgr8')
+    lower_red = np.array([0, 0, 150])
+    upper_red = np.array([60, 60, 255])
+
+    mask = cv2.inRange(cvimage, lower_red, upper_red)
+
+    M = cv2.moments(mask, binaryImage=True)
+    if M["m00"] > 0:
+        return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
 def main():
     rclpy.init()
     node = Node('hw01_check_setup')
     arm = ArmClient(node)
+    cvb = CvBridge()
 
     image_received = None
     depth_received = None
