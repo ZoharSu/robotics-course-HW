@@ -77,22 +77,27 @@ def main():
     node.create_subscription(CameraInfo, '/camera/camera_info', on_info, qos_profile_sensor_data)
 
     motion = None
-    deadline = time.monotonic() + 100.0
-    try:
-        while rclpy.ok() and time.monotonic() < deadline:
-            rclpy.spin_once(node, timeout_sec=0.1)
-            if motion is None and image_received is not None and arm.ready():
-                # Fixed demo point, unrelated to assignment targets. Units are metres.
-                point = PointStamped()
-                point.header.frame_id = 'base_link'
-                point.point.x, point.point.y, point.point.z = 0.20, -0.20, 0.14
-                motion = arm.move_to_point(point)
-            if motion is not None and motion.done():
-                break
+    cx = 0; cy = 0
+    image_ok = False; depth_ok = False; motion_ok = False
 
-        image_ok = image_received is not None and time.monotonic() - image_received < 2.0
-        depth_ok = depth_received is not None and time.monotonic() - depth_received < 2.0
-        motion_ok = motion is not None and motion.done() and motion.result().success
+    try:
+        while rclpy.ok() and not (image_ok and depth_ok and camera_info is not None):
+            rclpy.spin_once(node, timeout_sec=0.1)
+            image_ok = image_received is not None and time.monotonic() - image_received < 2.0
+            depth_ok = depth_received is not None and time.monotonic() - depth_received < 2.0
+
+        if image_ok and depth_ok and camera_info is not None:
+            cvdepth = cvb.imgmsg_to_cv2(depth_image, desired_encoding="passthrough")
+
+            cix, ciy = find_marker(cvb, raw_image)
+            cz = cvdepth[ciy][cix] # CV2 coordinate ordering is swapped for some reason
+
+            K = np.reshape(np.array(camera_info.k), (3, 3))
+            cx, cy = image_to_3d(K, cix, ciy, cz)
+
+            print(f"{cx = }, {cy = }")
+            # TODO: base_link transformation
+        # TODO: motion based on `./check_setup.py`
 
         print(f'{"PASS" if image_ok else "FAIL"}: fresh camera image reception')
         print(f'{"PASS" if depth_ok else "FAIL"}: fresh camera depth reception')
