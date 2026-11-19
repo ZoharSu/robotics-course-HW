@@ -27,6 +27,13 @@ def find_marker(cvb: CvBridge, image: Image) -> tuple[float, float]:
     if M["m00"] > 0:
         return (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
+def image_to_3d(K, cix: int, ciy: int, cz: float) -> tuple[float, float]:
+    # See 'report.md' for an explanation
+    cx = cz * (cix - K[0][2]) / K[0][0]
+    cy = cz * (ciy - K[1][2]) / K[1][1]
+
+    return (cx, cy)
+
 def main():
     rclpy.init()
     node = Node('hw01_check_setup')
