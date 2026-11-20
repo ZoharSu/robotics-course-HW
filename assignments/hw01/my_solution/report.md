@@ -29,6 +29,21 @@ And that is the representation of the pixel (x, y) in the camera coordinate fram
 
 ## Technical Commentary about the code
 
+Perception & Main Loop:
+Initializes the ROS 2 node with use_sim_time=True, subscribes to /camera/image_raw, /camera/depth/image_raw, and /camera/camera_info using qos_profile_sensor_data, detects the marker centroid, validates that the sampled depth is finite and positive, and constructs a PointStamped message in camera_optical_frame using the image header.
+
+TF2 Transformation & Debug Topics:
+Publishes the raw detected point to /hw01/target_camera, transforms it into base_link using tf2_ros.Buffer and TransformListener (with a 0.2 s timeout), and publishes the transformed point (before hover offset) to /hw01/target_base.
+
+Hover Goal Construction:
+Adds a 0.08 m offset along the $Z$-axis in base_link and validates that all coordinates are finite and that the resulting tip height is within 14 +/- 0.01 m before commanding the arm
+
+Freshness (Staleness) Checks:
+Rejects observations if no camera frame has arrived within 2.0 s wall-clock time (time.monotonic()) or if the observation timestamp is older than 0.5 s relative to the simulation clock.
+
+Motion Lifecycle & Failure Handling:
+Tracks a single active motion Future via ArmClient so no overlapping goals are sent, never reuses an earlier target when detection or TF2 fails, logs the final success and message outcome, and cancels any pending motion on KeyboardInterrupt / shutdown.
+
 ## Results
 We passed all 3 given presets,
 with each reporting that we held for '2 simulated seconds', and 'live contact streams clear'.
