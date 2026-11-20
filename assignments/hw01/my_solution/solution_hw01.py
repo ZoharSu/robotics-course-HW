@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """HW1 integrated node: perception (partner) + TargetExecutor (items 4-6)."""
 import math
 import time
@@ -30,8 +31,8 @@ def find_marker(cvb: CvBridge, image: Image):
 
 
 def image_to_3d(K, cix: int, ciy: int, cz: float) -> tuple[float, float]:
-    cx = cz * (cix - K[0][2]) / K[0][0]
-    cy = cz * (ciy - K[1][2]) / K[1][1]
+    cx = cz * float(cix - K[0][2]) / K[0][0]
+    cy = cz * float(ciy - K[1][2]) / K[1][1]
     return (cx, cy)
 
 
