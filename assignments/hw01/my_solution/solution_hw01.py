@@ -17,14 +17,27 @@ from target_executor import TargetExecutor
 
 
 def find_marker(cvb: CvBridge, image: Image):
-    # FIXME: Account for partially occluded/nonexistent marker
     cvimage = cvb.imgmsg_to_cv2(image, desired_encoding='bgr8')
     lower_red = np.array([0, 0, 150])
     upper_red = np.array([60, 60, 255])
 
     mask = cv2.inRange(cvimage, lower_red, upper_red)
 
-    M = cv2.moments(mask, binaryImage=True)
+    def is_contour_circular(con) -> bool:
+        p = cv2.arcLength(con, True)
+        a = cv2.contourArea(con)
+        if p == 0: return False
+        circularity = 4*np.pi*(a/(p**2))
+        return 0.6 < circularity < 1.2
+    
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    circular_cons = [c for c in contours if is_contour_circular(c)]
+    if len(circular_cons) == 0: return None
+
+    mcon = max(circular_cons, key=cv2.contourArea)
+
+    M = cv2.moments(mcon)
     if M['m00'] > 0:
         return (int(M['m10'] / M['m00']), int(M['m01'] / M['m00']))
     return None
@@ -100,7 +113,8 @@ def main():
                 cvdepth = cvb.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
                 marker = find_marker(cvb, raw_image)
                 if marker is None:
-                    continue
+                    print("Marker is nonexistant/partially occluded")
+                    return 1
 
                 cix, ciy = marker
                 cz = float(cvdepth[ciy][cix])
