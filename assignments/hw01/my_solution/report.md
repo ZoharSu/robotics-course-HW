@@ -6,14 +6,15 @@
 ## Detecting the marker
 We chose to use opencv for the marker detection.
 Firstly we apply a color-mask, using `cv2.inRange`, and filter out any non-red colors.
-Then, we follow [1], using `cv2.moments` to find the center of the resulting blob.
+We use `cv2.findContours`, and filter the ones that are not 'circular' enough, see [1].
+Then, taking the max contour, we follow [2], using `cv2.moments` to find the center point.
 
 ## Transforming from 2d coordinates in image frame into 3d camera coordinates frame
-We're given the intrinsic matrix[2].
+We're given the intrinsic matrix[3].
 K = [[f_x,   0, c_x]
      [  0, f_y, c_y]
      [  0,   0,   1]]
-As explained in [2], given a vector a = [u v w]^T in the camera coordinate frame,
+As explained in [3], given a vector a = [u v w]^T in the camera coordinate frame,
 let K v = [x y w]^T, the pixel (x, y) represents the corresponding pixel to the vector.
 
 Therefore, to go from a' = [x y 1]^T to b = [u v 1] we need to invert K, we get
@@ -43,6 +44,7 @@ Rejects observations if no camera frame has arrived within 2.0 s wall-clock time
 
 Motion Lifecycle & Failure Handling:
 Tracks a single active motion Future via ArmClient so no overlapping goals are sent, never reuses an earlier target when detection or TF2 fails, logs the final success and message outcome, and cancels any pending motion on KeyboardInterrupt / shutdown.
+Additionaly, if we fail to detect the marker(see ## Detecting the marker), we exit with error code 1.
 
 ## Results
 We passed all 3 given presets,
@@ -53,5 +55,6 @@ We get the following tip errors:
 - lastly, for preset 3, a tip error of 0.0050 m.
 
 ## Sources
-- [1]: <https://stackoverflow.com/a/12608954>
-- [2]: <https://docs.ros.org/en/jazzy/p/sensor_msgs/msg/CameraInfo.html>
+- [1]: <https://stackoverflow.com/q/42203898>
+- [2]: <https://stackoverflow.com/a/12608954>
+- [3]: <https://docs.ros.org/en/jazzy/p/sensor_msgs/msg/CameraInfo.html>
